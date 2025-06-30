@@ -23,6 +23,8 @@
 // Own
 #include "TerminalDisplay.h"
 
+#include <cstdint>
+
 // Qt
 #include <QAbstractButton>
 #include <QApplication>
