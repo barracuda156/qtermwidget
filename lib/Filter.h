@@ -244,6 +244,7 @@ class FilterObject;
 class QTERMWIDGET_EXPORT UrlFilter : public RegExpFilter
 {
     Q_OBJECT
+
 public:
     /**
      * Hotspot type created by UrlFilter instances.  The activate() method opens a web browser
@@ -282,31 +283,35 @@ public:
 
     UrlFilter();
 
+signals:
+    void activated(const QUrl& url, bool fromContextMenu);
+
 protected:
     RegExpFilter::HotSpot* newHotSpot(int,int,int,int) override;
 
 private:
-
     static const QRegExp FullUrlRegExp;
     static const QRegExp EmailAddressRegExp;
 
     // combined OR of FullUrlRegExp and EmailAddressRegExp
     static const QRegExp CompleteUrlRegExp;
-signals:
-    void activated(const QUrl& url, bool fromContextMenu);
 };
 
 class QTERMWIDGET_NO_EXPORT FilterObject : public QObject
 {
     Q_OBJECT
+
 public:
     FilterObject(Filter::HotSpot* filter) : _filter(filter) {}
 
     void emitActivated(const QUrl& url, bool fromContextMenu);
+
 public slots:
     void activate();
+
 private:
     Filter::HotSpot* _filter;
+
 signals:
     void activated(const QUrl& url, bool fromContextMenu);
 };

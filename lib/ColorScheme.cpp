@@ -30,8 +30,7 @@
 #include <QtDebug>
 #include <QSettings>
 #include <QDir>
-#include <QRegularExpression>
-#include <QRandomGenerator>
+#include <QRegExp>
 
 
 // KDE
@@ -176,21 +175,25 @@ void ColorScheme::setColorTableEntry(int index , const ColorEntry& entry)
 
     _table[index] = entry;
 }
-ColorEntry ColorScheme::colorEntry(int index) const
+ColorEntry ColorScheme::colorEntry(int index , uint randomSeed) const
 {
     Q_ASSERT( index >= 0 && index < TABLE_COLORS );
 
+    if ( randomSeed != 0 )
+        qsrand(randomSeed);
+
     ColorEntry entry = colorTable()[index];
 
-    if ( _randomTable != nullptr &&
+    if ( randomSeed != 0 &&
+        _randomTable != nullptr &&
         !_randomTable[index].isNull() )
     {
         const RandomizationRange& range = _randomTable[index];
 
 
-        int hueDifference = range.hue ? QRandomGenerator::global()->bounded(range.hue) - range.hue/2 : 0;
-        int saturationDifference = range.saturation ? QRandomGenerator::global()->bounded(range.saturation) - range.saturation/2 : 0;
-        int valueDifference = range.value ? QRandomGenerator::global()->bounded(range.value) - range.value/2 : 0;
+        int hueDifference = range.hue ? (qrand() % range.hue) - range.hue/2 : 0;
+        int saturationDifference = range.saturation ? (qrand() % range.saturation) - range.saturation/2 : 0;
+        int  valueDifference = range.value ? (qrand() % range.value) - range.value/2 : 0;
 
         QColor& color = entry.color;
 
@@ -203,10 +206,10 @@ ColorEntry ColorScheme::colorEntry(int index) const
 
     return entry;
 }
-void ColorScheme::getColorTable(ColorEntry* table) const
+void ColorScheme::getColorTable(ColorEntry* table , uint randomSeed) const
 {
     for ( int i = 0 ; i < TABLE_COLORS ; i++ )
-        table[i] = colorEntry(i);
+        table[i] = colorEntry(i,randomSeed);
 }
 bool ColorScheme::randomizedBackgroundColor() const
 {
@@ -342,7 +345,7 @@ void ColorScheme::readColorEntry(QSettings * s , int index)
     if (colorValue.type() == QVariant::StringList)
     {
         QStringList rgbList = colorValue.toStringList();
-        colorStr = rgbList.join(QLatin1Char(','));
+        colorStr = rgbList.join(QString::fromAscii(","));
         if (rgbList.count() == 3)
         {
             bool parse_ok;
@@ -359,14 +362,13 @@ void ColorScheme::readColorEntry(QSettings * s , int index)
     else
     {
         colorStr = colorValue.toString();
-        QRegularExpression hexColorPattern(QLatin1String("^#[0-9a-f]{6}$"),
-                                           QRegularExpression::CaseInsensitiveOption);
-        if (hexColorPattern.match(colorStr).hasMatch())
+        QRegExp hexColorPattern(QString::fromAscii("^#[0-9a-f]{6}$"), Qt::CaseInsensitive);
+        if (hexColorPattern.indexIn(colorStr) >= 0)
         {
             // Parsing is always ok as already matched by the regexp
-            r = colorStr.midRef(1, 2).toInt(nullptr, 16);
-            g = colorStr.midRef(3, 2).toInt(nullptr, 16);
-            b = colorStr.midRef(5, 2).toInt(nullptr, 16);
+            r = colorStr.mid(1, 2).toInt(0, 16);
+            g = colorStr.mid(3, 2).toInt(0, 16);
+            b = colorStr.mid(5, 2).toInt(0, 16);
             ok = true;
         }
     }
@@ -670,5 +672,5 @@ const ColorScheme* ColorSchemeManager::findColorScheme(const QString& name)
 Q_GLOBAL_STATIC(ColorSchemeManager, theColorSchemeManager)
 ColorSchemeManager* ColorSchemeManager::instance()
 {
-    return theColorSchemeManager;
+    return theColorSchemeManager();
 }

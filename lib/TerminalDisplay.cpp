@@ -38,7 +38,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPixmap>
-#include <QRegularExpression>
+#include <QRegExp>
 #include <QScrollBar>
 #include <QStyle>
 #include <QTimer>
@@ -145,7 +145,7 @@ void TerminalDisplay::setScreenWindow(ScreenWindow* window)
         connect( _screenWindow , SIGNAL(outputChanged()) , this , SLOT(updateImage()) );
         connect( _screenWindow , SIGNAL(outputChanged()) , this , SLOT(updateFilters()) );
         connect( _screenWindow , SIGNAL(scrolled(int)) , this , SLOT(updateFilters()) );
-        connect( _screenWindow , &ScreenWindow::scrollToEnd , this , &TerminalDisplay::scrollToEnd );
+        connect( _screenWindow , SIGNAL(scrollToEnd()) , this , SLOT(scrollToEnd()));
         window->setWindowLines(_lines);
     }
 }
@@ -226,14 +226,14 @@ void TerminalDisplay::fontChange(const QFont&)
   // "Base character width on widest ASCII character. This prevents too wide
   //  characters in the presence of double wide (e.g. Japanese) characters."
   // Get the width from representative normal width characters
-  _fontWidth = qRound(static_cast<double>(fm.horizontalAdvance(QLatin1String(REPCHAR)))/static_cast<double>(qstrlen(REPCHAR)));
+  _fontWidth = qRound(static_cast<double>(fm.width(QLatin1String(REPCHAR)))/static_cast<double>(qstrlen(REPCHAR)));
 
   _fixedFont = true;
 
-  int fw = fm.horizontalAdvance(QLatin1Char(REPCHAR[0]));
+  int fw = fm.width(QLatin1Char(REPCHAR[0]));
   for(unsigned int i=1; i< qstrlen(REPCHAR); i++)
   {
-    if (fw != fm.horizontalAdvance(QLatin1Char(REPCHAR[i])))
+    if (fw != fm.width(QLatin1Char(REPCHAR[i])))
     {
       _fixedFont = false;
       break;
@@ -386,8 +386,7 @@ TerminalDisplay::TerminalDisplay(QWidget *parent)
   _scrollBar = new QScrollBar(this);
   // since the contrast with the terminal background may not be enough,
   // the scrollbar should be auto-filled if not transient
-  if (!_scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar))
-    _scrollBar->setAutoFillBackground(true);
+  _scrollBar->setAutoFillBackground(true);
   setScroll(0,0);
   _scrollBar->setCursor( Qt::ArrowCursor );
   connect(_scrollBar, SIGNAL(valueChanged(int)), this,
@@ -956,9 +955,7 @@ void TerminalDisplay::scrollImage(int lines , const QRect& screenWindowRegion)
     // Set the QT_FLUSH_PAINT environment variable to '1' before starting the
     // application to monitor repainting.
     //
-    int scrollBarWidth = _scrollBar->isHidden() ? 0 :
-                         _scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar) ?
-                         0 : _scrollBar->width();
+    int scrollBarWidth = _scrollBar->isHidden() ? 0 : _scrollBar->width();
     const int SCROLLBAR_CONTENT_GAP = scrollBarWidth == 0 ? 0 : 1;
     QRect scrollRect;
     if ( _scrollbarLocation == QTermWidget::ScrollBarLeft )
@@ -1274,7 +1271,7 @@ void TerminalDisplay::showResizeNotification()
      {
          const QString label = tr("Size: XXX x XXX");
         _resizeWidget = new QLabel(label, this);
-        _resizeWidget->setMinimumWidth(_resizeWidget->fontMetrics().horizontalAdvance(label));
+        _resizeWidget->setMinimumWidth(_resizeWidget->fontMetrics().width(label));
         _resizeWidget->setMinimumHeight(_resizeWidget->sizeHint().height());
         _resizeWidget->setAlignment(Qt::AlignCenter);
 
@@ -1443,11 +1440,11 @@ void TerminalDisplay::paintEvent( QPaintEvent* pe )
   }
 
   const QRegion regToDraw = pe->region() & cr;
-  for (auto rect = regToDraw.begin(); rect != regToDraw.end(); rect++)
+  foreach (const QRect &rect, regToDraw.rects())
   {
-    drawBackground(paint,*rect,palette().window().color(),
+    drawBackground(paint, rect, palette().window().color(),
                    true /* use opacity setting */);
-    drawContents(paint, *rect);
+    drawContents(paint, rect);
   }
   drawInputMethodPreeditString(paint,preeditRect());
   paintFilters(paint);
@@ -1506,8 +1503,7 @@ void TerminalDisplay::paintFilters(QPainter& painter)
     int cursorLine;
     int cursorColumn;
     int leftMargin = _leftBaseMargin
-                     + ((_scrollbarLocation == QTermWidget::ScrollBarLeft
-                         && !_scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar))
+                     + ((_scrollbarLocation == QTermWidget::ScrollBarLeft)
                         ? _scrollBar->width() : 0);
 
     getCharacterPosition( cursorPos , cursorLine , cursorColumn );
@@ -1619,7 +1615,7 @@ int TerminalDisplay::textWidth(const int startColumn, const int length, const in
   QFontMetrics fm(font());
   int result = 0;
   for (int column = 0; column < length; column++) {
-    result += fm.horizontalAdvance(_image[loc(startColumn + column, line)].character);
+    result += fm.width(_image[loc(startColumn + column, line)].character);
   }
   return result;
 }
@@ -2014,7 +2010,7 @@ void TerminalDisplay::mousePressEvent(QMouseEvent* ev)
           spot->activate(QLatin1String("click-action"));
     }
   }
-  else if ( ev->button() == Qt::MiddleButton )
+  else if ( ev->button() == Qt::MidButton )
   {
     if ( _mouseMarks || (ev->modifiers() & Qt::ShiftModifier) )
       emitSelection(true,ev->modifiers() & Qt::ControlModifier);
@@ -2045,8 +2041,7 @@ void TerminalDisplay::mouseMoveEvent(QMouseEvent* ev)
   int charLine = 0;
   int charColumn = 0;
   int leftMargin = _leftBaseMargin
-                   + ((_scrollbarLocation == QTermWidget::ScrollBarLeft
-                       && !_scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar))
+                   + ((_scrollbarLocation == QTermWidget::ScrollBarLeft)
                       ? _scrollBar->width() : 0);
 
   getCharacterPosition(ev->pos(),charLine,charColumn);
@@ -2105,7 +2100,7 @@ void TerminalDisplay::mouseMoveEvent(QMouseEvent* ev)
     int button = 3;
     if (ev->buttons() & Qt::LeftButton)
         button = 0;
-    if (ev->buttons() & Qt::MiddleButton)
+    if (ev->buttons() & Qt::MidButton)
         button = 1;
     if (ev->buttons() & Qt::RightButton)
         button = 2;
@@ -2147,7 +2142,7 @@ void TerminalDisplay::mouseMoveEvent(QMouseEvent* ev)
   if (_actSel == 0) return;
 
  // don't extend selection while pasting
-  if (ev->buttons() & Qt::MiddleButton) return;
+  if (ev->buttons() & Qt::MidButton) return;
 
   extendSelection( ev->pos() );
 }
@@ -2402,9 +2397,9 @@ void TerminalDisplay::mouseReleaseEvent(QMouseEvent* ev)
 
   if ( !_mouseMarks &&
        ((ev->button() == Qt::RightButton && !(ev->modifiers() & Qt::ShiftModifier))
-                        || ev->button() == Qt::MiddleButton) )
+                        || ev->button() == Qt::MidButton) )
   {
-    emit mouseSignal( ev->button() == Qt::MiddleButton ? 1 : 2,
+    emit mouseSignal( ev->button() == Qt::MidButton ? 1 : 2,
                       charColumn + 1,
                       charLine + 1 +_scrollBar->value() -_scrollBar->maximum() ,
                       2);
@@ -2549,7 +2544,7 @@ void TerminalDisplay::mouseDoubleClickEvent(QMouseEvent* ev)
 
 void TerminalDisplay::wheelEvent( QWheelEvent* ev )
 {
-  if (ev->angleDelta().y() == 0)
+  if (ev->delta() == 0)
     return;
 
   // if the terminal program is not interested mouse events
@@ -2569,10 +2564,10 @@ void TerminalDisplay::wheelEvent( QWheelEvent* ev )
         // to get a reasonable scrolling speed, scroll by one line for every 5 degrees
         // of mouse wheel rotation.  Mouse wheels typically move in steps of 15 degrees,
         // giving a scroll of 3 lines
-        int key = ev->angleDelta().y() > 0 ? Qt::Key_Up : Qt::Key_Down;
+        int key = ev->delta() > 0 ? Qt::Key_Up : Qt::Key_Down;
 
         // QWheelEvent::angleDelta().y() gives rotation in eighths of a degree
-        int wheelDegrees = ev->angleDelta().y() / 8;
+        int wheelDegrees = ev->delta() / 8;
         int linesToScroll = abs(wheelDegrees) / 5;
 
         QKeyEvent keyScrollEvent(QEvent::KeyPress,key,Qt::NoModifier);
@@ -2587,9 +2582,9 @@ void TerminalDisplay::wheelEvent( QWheelEvent* ev )
 
     int charLine;
     int charColumn;
-    getCharacterPosition( ev->position() , charLine , charColumn );
+    getCharacterPosition(ev->pos(), charLine, charColumn);
 
-    emit mouseSignal( ev->angleDelta().y() > 0 ? 4 : 5,
+    emit mouseSignal(ev->delta() > 0 ? 4 : 5,
                       charColumn + 1,
                       charLine + 1 +_scrollBar->value() -_scrollBar->maximum() ,
                       0);
@@ -2729,7 +2724,7 @@ void TerminalDisplay::emitSelection(bool useXselection,bool appendReturn)
     text.replace(QLatin1Char('\n'), QLatin1Char('\r'));
 
     if (_trimPastedTrailingNewlines) {
-        text.replace(QRegularExpression(QStringLiteral("\\r+$")), QString());
+        text.replace(QRegExp(QString::fromAscii("\\r+$")), QString());
     }
 
     if (_confirmMultilinePaste && text.contains(QLatin1Char('\r'))) {
@@ -2792,7 +2787,7 @@ bool TerminalDisplay::multilineConfirmation(const QString& text)
     const auto buttons = confirmation.buttons();
     for( QAbstractButton * btn : buttons ) {
         if (confirmation.buttonRole(btn) == QMessageBox::ActionRole && btn->text() == QMessageBox::tr("Show Details...")) {
-            Q_EMIT btn->clicked();
+            btn->animateClick();
             break;
         }
     }
@@ -2901,7 +2896,7 @@ QVariant TerminalDisplay::inputMethodQuery( Qt::InputMethodQuery query ) const
     const QPoint cursorPos = _screenWindow ? _screenWindow->cursorPosition() : QPoint(0,0);
     switch ( query )
     {
-        case Qt::ImCursorRectangle:
+        case Qt::ImMicroFocus:
                 return imageToWidget(QRect(cursorPos.x(),cursorPos.y(),1,1));
             break;
         case Qt::ImFont:
@@ -3070,8 +3065,7 @@ void TerminalDisplay::clearImage()
 void TerminalDisplay::calcGeometry()
 {
   _scrollBar->resize(_scrollBar->sizeHint().width(), contentsRect().height());
-  int scrollBarWidth = _scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar)
-                       ? 0 : _scrollBar->width();
+  int scrollBarWidth = _scrollBar->width();
   switch(_scrollbarLocation)
   {
     case QTermWidget::NoScrollBar :
@@ -3126,8 +3120,7 @@ void TerminalDisplay::makeImage()
 // calculate the needed size, this must be synced with calcGeometry()
 void TerminalDisplay::setSize(int columns, int lines)
 {
-  int scrollBarWidth = (_scrollBar->isHidden()
-                        || _scrollBar->style()->styleHint(QStyle::SH_ScrollBar_Transient, nullptr, _scrollBar))
+  int scrollBarWidth = (_scrollBar->isHidden())
                        ? 0 : _scrollBar->sizeHint().width();
   int horizontalMargin = 2 * _leftBaseMargin;
   int verticalMargin = 2 * _topBaseMargin;
@@ -3220,7 +3213,7 @@ void TerminalDisplay::dropEvent(QDropEvent* event)
     dropText.replace(QLatin1Char('\n'), QLatin1Char('\r'));
     if (_trimPastedTrailingNewlines)
     {
-      dropText.replace(QRegularExpression(QStringLiteral("\\r+$")), QString());
+      dropText.replace(QRegExp(QString::fromAscii("\\r+$")), QString());
     }
     if (_confirmMultilinePaste && dropText.contains(QLatin1Char('\r')))
     {
@@ -3270,8 +3263,9 @@ void TerminalDisplay::outputSuspended(bool suspended)
             _outputSuspendedLabel->setContentsMargins(5, 5, 5, 5);
 
             //enable activation of "Xon/Xoff" link in label
-            _outputSuspendedLabel->setTextInteractionFlags(Qt::LinksAccessibleByMouse |
-                                                          Qt::LinksAccessibleByKeyboard);
+            _outputSuspendedLabel->setTextInteractionFlags(
+                Qt::TextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::TextSelectableByMouse)
+            );
             _outputSuspendedLabel->setOpenExternalLinks(true);
             _outputSuspendedLabel->setVisible(false);
 

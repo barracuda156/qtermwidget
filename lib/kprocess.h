@@ -34,8 +34,6 @@
 
 #include <QProcess>
 
-#include <memory>
-
 class KProcessPrivate;
 
 /**
@@ -71,9 +69,9 @@ public:
         ForwardedChannels = QProcess::ForwardedChannels,
             /**< Both standard output and standard error are forwarded
                  to the parent process' respective channel */
-        OnlyStdoutChannel = QProcess::ForwardedErrorChannel,
+        OnlyStdoutChannel = QProcess::ForwardedChannels,
             /**< Only standard output is handled; standard error is forwarded */
-        OnlyStderrChannel = QProcess::ForwardedOutputChannel
+        OnlyStderrChannel = QProcess::ForwardedChannels
             /**< Only standard error is handled; standard output is forwarded */
     };
 
@@ -314,6 +312,18 @@ public:
      */
     static int startDetached(const QStringList &argv);
 
+    /**
+     * Obtain the process' ID as known to the system.
+     *
+     * Unlike with QProcess::pid(), this is a real PID also on Windows.
+     *
+     * This function can be called only while the process is running.
+     * It cannot be applied to detached processes.
+     *
+     * @return the process ID
+     */
+    int pid() const;
+
 protected:
     /**
      * @internal
@@ -323,7 +333,7 @@ protected:
     /**
      * @internal
      */
-    std::unique_ptr<KProcessPrivate> const d_ptr;
+    KProcessPrivate * const d_ptr;
 
 private:
     // hide those
@@ -342,6 +352,9 @@ protected:
     KProcessPrivate(KProcess *qq) :
         openMode(QIODevice::ReadWrite),
         q_ptr(qq)
+    {
+    }
+    virtual ~KProcessPrivate()
     {
     }
 

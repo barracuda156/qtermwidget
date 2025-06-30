@@ -402,7 +402,7 @@ RegExpFilter::HotSpot* UrlFilter::newHotSpot(int startLine,int startColumn,int e
 {
     HotSpot *spot = new UrlFilter::HotSpot(startLine,startColumn,
                                                endLine,endColumn);
-    connect(spot->getUrlObject(), &FilterObject::activated, this, &UrlFilter::activated);
+    connect(spot->getUrlObject(), SIGNAL(activated(QUrl,bool)), this, SLOT(activated(QUrl,bool)));
     return spot;
 }
 
@@ -415,7 +415,7 @@ UrlFilter::HotSpot::HotSpot(int startLine,int startColumn,int endLine,int endCol
 
 UrlFilter::HotSpot::UrlType UrlFilter::HotSpot::urlType() const
 {
-    QString url = capturedTexts().constFirst();
+    QString url = capturedTexts().at(0);
 
     if ( FullUrlRegExp.exactMatch(url) )
         return StandardUrl;
@@ -427,7 +427,7 @@ UrlFilter::HotSpot::UrlType UrlFilter::HotSpot::urlType() const
 
 void UrlFilter::HotSpot::activate(const QString& actionName)
 {
-    QString url = capturedTexts().constFirst();
+    QString url = capturedTexts().at(0);
 
     const UrlType kind = urlType();
 
@@ -524,11 +524,11 @@ QList<QAction*> UrlFilter::HotSpot::actions()
     // object names are set here so that the hotspot performs the
     // correct action when activated() is called with the triggered
     // action passed as a parameter.
-    openAction->setObjectName( QLatin1String("open-action" ));
-    copyAction->setObjectName( QLatin1String("copy-action" ));
+    openAction->setObjectName(QLatin1String("open-action"));
+    copyAction->setObjectName(QLatin1String("copy-action"));
 
-    QObject::connect( openAction , &QAction::triggered , _urlObject , &FilterObject::activate );
-    QObject::connect( copyAction , &QAction::triggered , _urlObject , &FilterObject::activate );
+    QObject::connect(openAction, SIGNAL(triggered()), _urlObject, SLOT(activate()));
+    QObject::connect(copyAction, SIGNAL(triggered()), _urlObject, SLOT(activate()));
 
     list << openAction;
     list << copyAction;

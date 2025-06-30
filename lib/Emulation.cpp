@@ -72,10 +72,14 @@ Emulation::Emulation() :
   connect(this , SIGNAL(programBracketedPasteModeChanged(bool)) ,
            SLOT(bracketedPasteModeChanged(bool)));
 
-  connect(this, &Emulation::cursorChanged, this, [this] (KeyboardCursorShape cursorShape, bool blinkingCursorEnabled) {
-    emit titleChanged( 50, QString(QLatin1String("CursorShape=%1;BlinkingCursorEnabled=%2"))
-                               .arg(static_cast<int>(cursorShape)).arg(blinkingCursorEnabled) );
-  });
+  connect(this, SIGNAL(cursorChanged(KeyboardCursorShape,bool)),
+           this, SLOT(onCursorChanged(KeyboardCursorShape,bool)));
+}
+
+void Emulation::onCursorChanged(KeyboardCursorShape cursorShape, bool blinkingCursorEnabled)
+{
+    emit titleChanged(50, QString::fromAscii("CursorShape=%1;BlinkingCursorEnabled=%2")
+                      .arg(static_cast<int>(cursorShape)).arg(blinkingCursorEnabled));
 }
 
 bool Emulation::programUsesMouse() const
@@ -104,16 +108,16 @@ ScreenWindow* Emulation::createWindow()
     window->setScreen(_currentScreen);
     _windows << window;
 
-    connect(window , SIGNAL(selectionChanged()),
-            this , SLOT(bufferedUpdate()));
+    connect(window, SIGNAL(selectionChanged()),
+            this, SLOT(bufferedUpdate()));
 
-    connect(this , SIGNAL(outputChanged()),
-            window , SLOT(notifyOutputChanged()) );
+    connect(this, SIGNAL(outputChanged()),
+            window, SLOT(notifyOutputChanged()) );
 
-    connect(this, &Emulation::handleCommandFromKeyboard,
-            window, &ScreenWindow::handleCommandFromKeyboard);
-    connect(this, &Emulation::outputFromKeypressEvent,
-            window, &ScreenWindow::scrollToEnd);
+    connect(this, SIGNAL(handleCommandFromKeyboard(QByteArray)),
+            window, SLOT(handleCommandFromKeyboard(QByteArray)));
+    connect(this, SIGNAL(outputFromKeypressEvent()),
+            window, SLOT(scrollToEnd()));
 
     return window;
 }
@@ -139,7 +143,7 @@ void Emulation::setScreen(int n)
   if (_currentScreen != old)
   {
      // tell all windows onto this emulation to switch to the newly active screen
-     for(ScreenWindow* window : qAsConst(_windows))
+     for(ScreenWindow* window : const_cast<const QList<ScreenWindow*>&>(_windows))
          window->setScreen(_currentScreen);
   }
 }

@@ -22,7 +22,7 @@ public:
         ScrollBarRight=2
     };
 
-    enum class KeyboardCursorShape
+    enum KeyboardCursorShape
     {
         BlockCursor=0,
         UnderlineCursor=1,

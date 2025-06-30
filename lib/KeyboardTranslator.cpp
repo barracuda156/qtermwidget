@@ -249,7 +249,7 @@ KeyboardTranslatorReader::KeyboardTranslatorReader( QIODevice* source )
    // read input until we find the description
    while ( _description.isEmpty() && !source->atEnd() )
    {
-        QList<Token> tokens = tokenize( QString::fromUtf8(source->readLine()) );
+        QList<Token> tokens = tokenize( QString::fromUtf8(source->readLine().constData()) );
         if ( !tokens.isEmpty() && tokens.first().type == Token::TitleKeyword )
             _description = tokens[1].text;
    }
@@ -261,7 +261,7 @@ void KeyboardTranslatorReader::readNext()
     // find next entry
     while ( !_source->atEnd() )
     {
-        const QList<Token>& tokens = tokenize( QString::fromUtf8(_source->readLine()) );
+        const QList<Token>& tokens = tokenize( QString::fromUtf8(_source->readLine().constData()) );
         if ( !tokens.isEmpty() && tokens.first().type == Token::KeyKeyword )
         {
             KeyboardTranslator::States flags = KeyboardTranslator::NoState;
@@ -787,7 +787,7 @@ void KeyboardTranslator::Entry::insertState( QString& item , int state ) const
 QString KeyboardTranslator::Entry::resultToString(bool expandWildCards,Qt::KeyboardModifiers modifiers) const
 {
     if ( !_text.isEmpty() )
-        return QString::fromLatin1(escapedText(expandWildCards,modifiers));
+        return QString::fromLatin1(escapedText(expandWildCards,modifiers).constData());
     else if ( _command == EraseCommand )
         return QLatin1String("Erase");
     else if ( _command == ScrollPageUpCommand )
@@ -871,7 +871,7 @@ void KeyboardTranslator::removeEntry(const Entry& entry)
 }
 KeyboardTranslator::Entry KeyboardTranslator::findEntry(int keyCode, Qt::KeyboardModifiers modifiers, States state) const
 {
-    for (auto it = _entries.cbegin(), end = _entries.cend(); it != end; ++it)
+    for (auto it = _entries.constBegin(), end = _entries.constEnd(); it != end; ++it)
     {
         if (it.key() == keyCode)
             if ( it.value().matches(keyCode,modifiers,state) )
@@ -907,5 +907,5 @@ bool KeyboardTranslatorManager::deleteTranslator(const QString& name)
 Q_GLOBAL_STATIC( KeyboardTranslatorManager , theKeyboardTranslatorManager )
 KeyboardTranslatorManager* KeyboardTranslatorManager::instance()
 {
-    return theKeyboardTranslatorManager;
+    return theKeyboardTranslatorManager();
 }

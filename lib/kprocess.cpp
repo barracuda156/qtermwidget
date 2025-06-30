@@ -50,7 +50,10 @@ KProcess::KProcess(KProcessPrivate *d, QObject *parent) :
     setOutputChannelMode(ForwardedChannels);
 }
 
-KProcess::~KProcess() = default;
+KProcess::~KProcess()
+{
+    delete d_ptr;
+}
 
 void KProcess::setOutputChannelMode(OutputChannelMode mode)
 {
@@ -307,4 +310,13 @@ int KProcess::startDetached(const QStringList &argv)
     QStringList args = argv;
     QString prog = args.takeFirst();
     return startDetached(prog, args);
+}
+
+int KProcess::pid() const
+{
+#ifdef Q_OS_UNIX
+    return (int) QProcess::pid();
+#else
+    return QProcess::pid() ? QProcess::pid()->dwProcessId : 0;
+#endif
 }

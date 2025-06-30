@@ -48,7 +48,7 @@ KPtyProcess::KPtyProcess(int ptyMasterFd, QObject *parent) :
 {
     Q_D(KPtyProcess);
 
-    d->pty = std::make_unique<KPtyDevice>(this);
+    d->pty = new KPtyDevice(this);
 
     if (ptyMasterFd == -1) {
         d->pty->open();
@@ -56,11 +56,14 @@ KPtyProcess::KPtyProcess(int ptyMasterFd, QObject *parent) :
         d->pty->open(ptyMasterFd);
     }
 
-    connect(this, &QProcess::stateChanged, this, [this](QProcess::ProcessState state) {
-        if (state == QProcess::NotRunning && d_ptr->addUtmp) {
-            d_ptr->pty->logout();
-        }
-    });
+    connect(this, SIGNAL(stateChanged(QProcess::ProcessState)), this, SLOT(onStateChanged(QProcess::ProcessState)));
+}
+
+void KPtyProcess::onStateChanged(QProcess::ProcessState state)
+{
+    if (state == QProcess::NotRunning && d_ptr->addUtmp) {
+        d_ptr->pty->logout();
+    }
 }
 
 KPtyProcess::~KPtyProcess()
@@ -72,14 +75,14 @@ KPtyProcess::~KPtyProcess()
         if (d->addUtmp)
         {
             d->pty->logout();
-            disconnect(this, &QProcess::stateChanged, this, nullptr);
+            disconnect(this, SIGNAL(stateChanged(QProcess::ProcessState)), this, SLOT(onStateChanged(QProcess::ProcessState)));
         }
     }
     waitForFinished(300); // give it some time to finish
     if (state() != QProcess::NotRunning)
     {
         qWarning() << Q_FUNC_INFO << "the terminal process is still running, trying to stop it by SIGHUP";
-        ::kill(static_cast<pid_t>(processId()), SIGHUP);
+        ::kill(pid(), SIGHUP);
         waitForFinished(300);
         if (state() != QProcess::NotRunning)
             qCritical() << Q_FUNC_INFO << "process didn't stop upon SIGHUP and will be SIGKILL-ed";
@@ -118,7 +121,7 @@ KPtyDevice *KPtyProcess::pty() const
 {
     Q_D(const KPtyProcess);
 
-    return d->pty.get();
+    return d->pty;
 }
 
 void KPtyProcess::setupChildProcess()

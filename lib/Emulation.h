@@ -128,7 +128,7 @@ public:
    * This enum describes the available shapes for the keyboard cursor.
    * See setKeyboardCursorShape()
    */
-  enum class KeyboardCursorShape {
+  enum KeyboardCursorShape {
       /** A rectangular block which covers the entire area of the cursor character. */
       BlockCursor = 0,
       /**
@@ -444,6 +444,9 @@ signals:
 
   void handleCommandFromKeyboard(KeyboardTranslator::Command command);
   void outputFromKeypressEvent(void);
+
+public slots:
+  void onCursorChanged(KeyboardCursorShape cursorShape, bool blinkingCursorEnabled);
 
 protected:
   virtual void setMode(int mode) = 0;

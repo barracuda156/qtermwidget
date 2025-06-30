@@ -205,6 +205,7 @@ KPty::KPty(KPtyPrivate *d) :
 KPty::~KPty()
 {
     close();
+    delete d_ptr;
 }
 
 bool KPty::open()
@@ -337,7 +338,7 @@ gotpty:
         qWarning()
         << "chownpty failed for device " << ptyName << "::" << d->ttyName
         << "\nThis means the communication can be eavesdropped."
-        << Qt::endl;
+        << endl;
     }
 
 #if defined (HAVE__GETPTY) || defined (HAVE_GRANTPT)

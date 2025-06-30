@@ -92,15 +92,15 @@ Session::Session(QObject* parent) :
 //            SLOT( fireZModemDetected() ) );
     connect( _emulation, SIGNAL( changeTabTextColorRequest( int ) ),
              this, SIGNAL( changeTabTextColorRequest( int ) ) );
-    connect( _emulation, SIGNAL(profileChangeCommandReceived(const QString &)),
+    connect( _emulation, SIGNAL( profileChangeCommandReceived(const QString &) ),
              this, SIGNAL( profileChangeCommandReceived(const QString &)) );
 
     connect(_emulation, SIGNAL(imageResizeRequest(QSize)),
             this, SLOT(onEmulationSizeChange(QSize)));
     connect(_emulation, SIGNAL(imageSizeChanged(int, int)),
             this, SLOT(onViewSizeChange(int, int)));
-    connect(_emulation, &Vt102Emulation::cursorChanged,
-            this, &Session::cursorChanged);
+    connect(_emulation, SIGNAL(cursorChanged(Konsole::Emulation::KeyboardCursorShape,bool)), 
+            this, SLOT(cursorChanged(Konsole::Emulation::KeyboardCursorShape,bool)));
 
     //connect teletype to emulation backend
     _shellProcess->setUtf8Mode(_emulation->utf8());
@@ -174,8 +174,8 @@ void Session::addView(TerminalDisplay * widget)
 
     if ( _emulation != nullptr ) {
         // connect emulation - view signals and slots
-        connect( widget , &TerminalDisplay::keyPressedSignal, _emulation ,
-                 &Emulation::sendKeyEvent);
+        connect( widget , SIGNAL(keyPressedSignal(QKeyEvent*,bool)), _emulation ,
+                 SLOT(sendKeyEvent(QKeyEvent*,bool)) );
         connect( widget , SIGNAL(mouseSignal(int,int,int,int)) , _emulation ,
                  SLOT(sendMouseEvent(int,int,int,int)) );
         connect( widget , SIGNAL(sendStringToEmu(const char *)) , _emulation ,
@@ -252,7 +252,7 @@ void Session::run()
      * As far as i know /bin/sh exists on every unix system.. You could also just put some ifdef __FREEBSD__ here but i think these 2 filechecks are worth
      * their computing time on any system - especially with the problem on arch linux being there too.
      */
-    QString exec = QString::fromLocal8Bit(QFile::encodeName(_program));
+    QString exec = QString::fromLocal8Bit(QFile::encodeName(_program).constData());
     // if 'exec' is not specified, fall back to default shell.  if that
     // is not set then fall back to /bin/sh
 
@@ -264,7 +264,7 @@ void Session::run()
 
         QFile excheck(exec);
         if ( exec.isEmpty() || !excheck.exists() ) {
-            exec = QString::fromLocal8Bit(qgetenv("SHELL"));
+            exec = QString::fromLocal8Bit(qgetenv("SHELL").constData());
         }
         excheck.setFileName(exec);
 
@@ -276,7 +276,7 @@ void Session::run()
 
     // _arguments sometimes contain ("") so isEmpty()
     // or count() does not work as expected...
-    QString argsTmp(_arguments.join(QLatin1Char(' ')).trimmed());
+    QString argsTmp(_arguments.join(QString::fromAscii(" ")).trimmed());
     QStringList arguments;
     arguments << exec;
     if (argsTmp.length())
@@ -539,7 +539,7 @@ void Session::refresh()
 
 bool Session::sendSignal(int signal)
 {
-    int result = ::kill(static_cast<pid_t>(_shellProcess->processId()),signal);
+    int result = ::kill(_shellProcess->pid(),signal);
 
      if ( result == 0 )
      {
@@ -928,7 +928,7 @@ int Session::foregroundProcessId() const
 }
 int Session::processId() const
 {
-    return static_cast<int>(_shellProcess->processId());
+    return _shellProcess->pid();
 }
 int Session::getPtySlaveFd() const
 {

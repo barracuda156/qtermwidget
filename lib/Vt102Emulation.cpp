@@ -1091,7 +1091,7 @@ void Vt102Emulation::sendKeyEvent(QKeyEvent* event, bool fromPaste)
         }
         else if ( !entry.text().isEmpty() )
         {
-            textToSend += _codec->fromUnicode(QString::fromUtf8(entry.text(true,modifiers)));
+            textToSend += _codec->fromUnicode(QString::fromUtf8(entry.text(true,modifiers).constData()));
         }
         else if((modifiers & KeyboardTranslator::CTRL_MOD) && event->key() >= 0x40 && event->key() < 0x5f) {
             textToSend += (event->key() & 0x1f);
@@ -1369,8 +1369,6 @@ void Vt102Emulation::reportDecodingError()
 {
   if (tokenBufferPos == 0 || ( tokenBufferPos == 1 && (tokenBuffer[0] & 0xff) >= 32) )
     return;
-  qCDebug(qtermwidgetLogger) << "Undecodable sequence:" << QString::fromWCharArray(tokenBuffer, tokenBufferPos);
 }
 
 //#include "Vt102Emulation.moc"
-

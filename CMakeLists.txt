@@ -18,7 +18,6 @@ option(QTERMWIDGET_USE_UTEMPTER "Uses libutempter on Linux or libulog on FreeBSD
 option(QTERMWIDGET_BUILD_PYTHON_BINDING "Build python binding" OFF)
 option(USE_UTF8PROC "Use libutf8proc for better Unicode support. Default OFF" OFF)
 
-
 # just change version for releases
 # keep this in sync with the version in pyqt/pyproject.toml
 set(QTERMWIDGET_VERSION_MAJOR "1")
@@ -32,11 +31,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Minimum Versions
-set(QT_MINIMUM_VERSION "5.15.0")
 set(LXQTBT_MINIMUM_VERSION "0.13.0")
 
-find_package(Qt5Widgets "${QT_MINIMUM_VERSION}" REQUIRED)
-find_package(Qt5LinguistTools "${QT_MINIMUM_VERSION}" REQUIRED)
+find_package(Qt4 COMPONENTS QtCore QtGui QtXml REQUIRED)
 find_package(lxqt-build-tools ${LXQTBT_MINIMUM_VERSION} REQUIRED)
 
 if(USE_UTF8PROC)
@@ -55,8 +52,7 @@ if(APPLE)
     endif()
 endif()
 
-set(QTERMWIDGET_LIBRARY_NAME qtermwidget5)
-
+set(QTERMWIDGET_LIBRARY_NAME qtermwidget4)
 
 # main library
 
@@ -130,9 +126,9 @@ set(QTERMWIDGET_INCLUDE_DIR "${CMAKE_INSTALL_FULL_INCLUDEDIR}/${QTERMWIDGET_LIBR
 
 CHECK_FUNCTION_EXISTS(updwtmpx HAVE_UPDWTMPX)
 
-qt5_wrap_cpp(MOCS ${HDRS})
-qt5_wrap_ui(UI_SRCS ${UI})
-set(PKG_CONFIG_REQ "Qt5Widgets")
+qt4_wrap_cpp(MOCS ${HDRS})
+qt4_wrap_ui(UI_SRCS ${UI})
+set(PKG_CONFIG_REQ "QtCore, QtGui, QtXml")
 
 lxqt_translate_ts(QTERMWIDGET_QM
     TRANSLATION_DIR "lib/translations"
@@ -147,12 +143,11 @@ lxqt_translate_ts(QTERMWIDGET_QM
 )
 
 add_library(${QTERMWIDGET_LIBRARY_NAME} SHARED ${SRCS} ${MOCS} ${UI_SRCS} ${QTERMWIDGET_QM})
-target_link_libraries(${QTERMWIDGET_LIBRARY_NAME} Qt5::Widgets)
+target_link_libraries(${QTERMWIDGET_LIBRARY_NAME} Qt4::QtCore Qt4::QtGui Qt4::QtXml)
 set_target_properties( ${QTERMWIDGET_LIBRARY_NAME} PROPERTIES
                        SOVERSION ${QTERMWIDGET_VERSION_MAJOR}
                        VERSION ${QTERMWIDGET_VERSION}
                      )
-
 
 if(APPLE)
     target_compile_definitions(${QTERMWIDGET_LIBRARY_NAME}
@@ -209,7 +204,6 @@ target_compile_definitions(${QTERMWIDGET_LIBRARY_NAME}
         "HAVE_POSIX_OPENPT"
         "HAVE_SYS_TIME_H"
 )
-
 
 generate_export_header(${QTERMWIDGET_LIBRARY_NAME}
     EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/lib/qtermwidget_export.h"

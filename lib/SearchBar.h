@@ -31,7 +31,7 @@ public:
     ~SearchBar() override;
     virtual void show();
     QString searchText();
-    bool useRegularExpression();
+    bool useRegExp();
     bool matchCase();
     bool highlightAllMatches();
 
@@ -54,7 +54,7 @@ private slots:
 private:
     Ui::SearchBar widget;
     QAction *m_matchCaseMenuEntry;
-    QAction *m_useRegularExpressionMenuEntry;
+    QAction *m_useRegExpMenuEntry;
     QAction *m_highlightMatchesMenuEntry;
 };
 

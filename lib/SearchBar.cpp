@@ -27,7 +27,7 @@ SearchBar::SearchBar(QWidget *parent) : QWidget(parent)
 {
     widget.setupUi(this);
     setAutoFillBackground(true); // make it always opaque, especially inside translucent windows
-    connect(widget.closeButton, &QAbstractButton::clicked, this, &SearchBar::hide);
+    connect(widget.closeButton, SIGNAL(clicked()), this, SLOT(hide()));
     connect(widget.searchTextEdit, SIGNAL(textChanged(QString)), this, SIGNAL(searchCriteriaChanged()));
     connect(widget.findPreviousButton, SIGNAL(clicked()), this, SIGNAL(findPrevious()));
     connect(widget.findNextButton, SIGNAL(clicked()), this, SIGNAL(findNext()));
@@ -43,9 +43,9 @@ SearchBar::SearchBar(QWidget *parent) : QWidget(parent)
     connect(m_matchCaseMenuEntry, SIGNAL(toggled(bool)), this, SIGNAL(searchCriteriaChanged()));
 
 
-    m_useRegularExpressionMenuEntry = optionsMenu->addAction(tr("Regular expression"));
-    m_useRegularExpressionMenuEntry->setCheckable(true);
-    connect(m_useRegularExpressionMenuEntry, SIGNAL(toggled(bool)), this, SIGNAL(searchCriteriaChanged()));
+    m_useRegExpMenuEntry = optionsMenu->addAction(tr("Regular expression"));
+    m_useRegExpMenuEntry->setCheckable(true);
+    connect(m_useRegExpMenuEntry, SIGNAL(toggled(bool)), this, SIGNAL(searchCriteriaChanged()));
 
     m_highlightMatchesMenuEntry = optionsMenu->addAction(tr("Highlight all matches"));
     m_highlightMatchesMenuEntry->setCheckable(true);
@@ -62,9 +62,9 @@ QString SearchBar::searchText()
 }
 
 
-bool SearchBar::useRegularExpression()
+bool SearchBar::useRegExp()
 {
-    return m_useRegularExpressionMenuEntry->isChecked();
+    return m_useRegExpMenuEntry->isChecked();
 }
 
 bool SearchBar::matchCase()

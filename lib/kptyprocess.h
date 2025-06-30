@@ -34,7 +34,6 @@
 #include "kptydevice.h"
 
 #include <csignal>
-#include <memory>
 
 class KPtyDevice;
 
@@ -103,7 +102,7 @@ public:
     bool isRunning() const
     {
         bool rval;
-        (processId() > 0) ? rval= true : rval= false;
+        (pid() > 0) ? rval= true : rval= false;
         return rval;
 
     }
@@ -147,8 +146,11 @@ protected:
      */
     void setupChildProcess() override;
 
+protected slots:
+    void onStateChanged(QProcess::ProcessState state);
+
 private:
-    std::unique_ptr<KPtyProcessPrivate> const d_ptr;
+    KPtyProcessPrivate * const d_ptr;
 };
 
 
@@ -162,7 +164,7 @@ public:
     {
     }
 
-    std::unique_ptr<KPtyDevice> pty;
+    KPtyDevice *pty;
     KPtyProcess::PtyChannels ptyChannels = KPtyProcess::NoChannels;
     bool addUtmp = false;
 };

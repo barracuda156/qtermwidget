@@ -67,7 +67,7 @@ ShellCommand::ShellCommand(const QString & command , const QStringList & argumen
 }
 QString ShellCommand::fullCommand() const
 {
-    return _arguments.join(QLatin1Char(' '));
+    return _arguments.join(QString::fromAscii(" "));
 }
 QString ShellCommand::command() const
 {
@@ -152,7 +152,7 @@ static bool expandEnv( QString & text )
                 int len = pos2 - pos;
                 QString key = text.mid( pos+1, len-1);
                 QString value =
-                    QString::fromLocal8Bit( qgetenv(key.toLocal8Bit().constData()) );
+                    QString::fromLocal8Bit( qgetenv(key.toLocal8Bit().constData()).constData() );
 
                 if ( !value.isEmpty() ) {
                     expanded = true;

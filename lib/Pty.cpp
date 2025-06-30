@@ -156,7 +156,7 @@ void Pty::addEnvironmentVariables(const QStringList& environment)
 
     // fallback to ensure that $TERM is always set
     if (!termEnvVarAdded) {
-        setEnv(QStringLiteral("TERM"), QStringLiteral("xterm-256color"));
+        setEnv(QString::fromUtf8("TERM"), QString::fromUtf8("xterm-256color"));
     }
 }
 }

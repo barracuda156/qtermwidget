@@ -83,9 +83,7 @@ Session *TermWidgetImpl::createSession(QWidget* parent)
      */
     //session->setProgram("/bin/bash");
 
-    session->setProgram(QString::fromLocal8Bit(qgetenv("SHELL")));
-
-
+    session->setProgram(QString::fromLocal8Bit(qgetenv("SHELL").constData()));
 
     QStringList args = QStringList(QString());
     session->setArguments(args);
@@ -168,7 +166,7 @@ void QTermWidget::search(bool forwards, bool next)
     //qDebug() << "current cursor position: " << m_impl->m_terminalDisplay->screenWindow()->cursorPosition();
 
     QRegExp regExp(m_searchBar->searchText());
-    regExp.setPatternSyntax(m_searchBar->useRegularExpression() ? QRegExp::RegExp : QRegExp::FixedString);
+    regExp.setPatternSyntax(m_searchBar->useRegExp() ? QRegExp::RegExp : QRegExp::FixedString);
     regExp.setCaseSensitivity(m_searchBar->matchCase() ? Qt::CaseSensitive : Qt::CaseInsensitive);
 
     HistorySearch *historySearch =
@@ -272,7 +270,7 @@ void QTermWidget::init(int startnow)
     // translations
     // First check $XDG_DATA_DIRS. This follows the implementation in libqtxdg
     QString d = QFile::decodeName(qgetenv("XDG_DATA_DIRS"));
-    QStringList dirs = d.split(QLatin1Char(':'), Qt::SkipEmptyParts);
+    QStringList dirs = d.split(QLatin1Char(':'), QString::SkipEmptyParts);
     if (dirs.isEmpty()) {
         dirs.append(QString::fromLatin1("/usr/local/share"));
         dirs.append(QString::fromLatin1("/usr/share"));
@@ -281,7 +279,7 @@ void QTermWidget::init(int startnow)
 
     m_translator = new QTranslator(this);
 
-    for (const QString& dir : qAsConst(dirs)) {
+    foreach (const QString& dir, dirs) {
         //qDebug() << "Trying to load translation file from dir" << dir;
         if (m_translator->load(QLocale::system(), QLatin1String("qtermwidget"), QLatin1String(QLatin1String("_")), dir)) {
             qApp->installTranslator(m_translator);
@@ -298,12 +296,12 @@ void QTermWidget::init(int startnow)
 
     connect(m_impl->m_session, SIGNAL(activity()), this, SIGNAL(activity()));
     connect(m_impl->m_session, SIGNAL(silence()), this, SIGNAL(silence()));
-    connect(m_impl->m_session, &Session::profileChangeCommandReceived, this, &QTermWidget::profileChanged);
-    connect(m_impl->m_session, &Session::receivedData, this, &QTermWidget::receivedData);
+    connect(m_impl->m_session, SIGNAL(profileChangeCommandReceived(QString)), this, SLOT(profileChanged(QString)));
+    connect(m_impl->m_session, SIGNAL(receivedData(QString)), this, SLOT(receivedData(QString)));
 
     // That's OK, FilterChain's dtor takes care of UrlFilter.
     UrlFilter *urlFilter = new UrlFilter();
-    connect(urlFilter, &UrlFilter::activated, this, &QTermWidget::urlActivated);
+    connect(urlFilter, SIGNAL(activated(QUrl,bool)), this, SLOT(urlActivated(QUrl,bool)));
     m_impl->m_terminalDisplay->filterChain()->addFilter(urlFilter);
 
     m_searchBar = new SearchBar(this);
@@ -329,8 +327,8 @@ void QTermWidget::init(int startnow)
             this, SIGNAL(termGetFocus()));
     connect(m_impl->m_terminalDisplay, SIGNAL(termLostFocus()),
             this, SIGNAL(termLostFocus()));
-    connect(m_impl->m_terminalDisplay, &TerminalDisplay::keyPressedSignal, this,
-            [this] (QKeyEvent* e, bool) { Q_EMIT termKeyPressed(e); });
+    connect(m_impl->m_terminalDisplay, SIGNAL(keyPressedSignal(QKeyEvent*,bool)),
+            this, SLOT(termKeyPressed(QKeyEvent*,bool)));
 //    m_impl->m_terminalDisplay->setSize(80, 40);
 
     QFont font = QApplication::font();
@@ -347,17 +345,16 @@ void QTermWidget::init(int startnow)
 
     connect(m_impl->m_session, SIGNAL(resizeRequest(QSize)), this, SLOT(setSize(QSize)));
     connect(m_impl->m_session, SIGNAL(finished()), this, SLOT(sessionFinished()));
-    connect(m_impl->m_session, &Session::titleChanged, this, &QTermWidget::titleChanged);
-    connect(m_impl->m_session, &Session::cursorChanged, this, &QTermWidget::cursorChanged);
+    connect(m_impl->m_session, SIGNAL(titleChanged()), this, SLOT(titleChanged()));
+    connect(m_impl->m_session, SIGNAL(cursorChanged(Konsole::Emulation::KeyboardCursorShape,bool)),
+            this, SLOT(cursorChanged(Konsole::Emulation::KeyboardCursorShape,bool)));
 }
-
 
 QTermWidget::~QTermWidget()
 {
     delete m_impl;
     emit destroyed();
 }
-
 
 void QTermWidget::setTerminalFont(const QFont &font)
 {

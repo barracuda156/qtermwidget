@@ -5,8 +5,6 @@
 #include <QtDebug>
 
 
-Q_LOGGING_CATEGORY(qtermwidgetLogger, "qtermwidget", QtWarningMsg)
-
 /*! Helper function to get possible location of layout files.
 By default the KB_LAYOUT_DIR is used (linux/BSD/macports).
 But in some cases (apple bundle) there can be more locations).
@@ -89,7 +87,7 @@ const QStringList get_color_schemes_dirs()
     }
 #endif
 
-    for (const QString& custom_dir : qAsConst(custom_color_schemes_dirs))
+    for (const QString& custom_dir : const_cast<const QStringList&>(custom_color_schemes_dirs))
     {
         d.setPath(custom_dir);
         if (d.exists())
